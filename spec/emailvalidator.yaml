@@ -1,0 +1,247 @@
+# spec/emailvalidator.yaml
+# Формальная спецификация модуля EmailValidator (практическая работа №1) с трассировкой требований.
+# Каждый элемент ссылается на функциональные (FR-n) и нефункциональные (NFR-n) требования.
+
+module: EmailValidator
+interface: IEmailValidator
+
+functional_requirements:
+  - id: FR-1
+    desc: "Адрес содержит ровно один символ @; общая длина не более 254 символов"
+  - id: FR-2
+    desc: "Локальная часть: 1-64 символа из A-Z a-z 0-9 . _ % + -; не начинается и не заканчивается точкой; нет двух точек подряд"
+  - id: FR-3
+    desc: "Домен: не менее двух меток через точку; метка 1-63 символа из A-Z a-z 0-9 -, без дефиса в начале и конце"
+  - id: FR-4
+    desc: "Последняя метка (TLD): не менее 2 символов, только латинские буквы"
+  - id: FR-5
+    desc: "Пробелы, кириллица, не-ASCII и управляющие символы недопустимы; обрезка пробелов не выполняется"
+  - id: FR-6
+    desc: "extract_domain возвращает домен корректного адреса в нижнем регистре"
+  - id: FR-7
+    desc: "extract_domain для None и некорректного адреса бросает ValueError"
+
+non_functional_requirements:
+  - id: NFR-1
+    desc: "is_valid никогда не бросает исключений, для любого входа, в том числе не строки"
+  - id: NFR-2
+    desc: "Класс не имеет состояния: результат зависит только от аргумента"
+  - id: NFR-3
+    desc: "Нет внешних зависимостей: только стандартная библиотека и интерфейс lab.interfaces"
+
+# Значения в inputs: скаляры YAML (строка, число, true/false, null) или конструкции:
+#   {concat: [часть, ...]}   - сборка строки; часть: строка или {unit: "a", count: 64}
+#   {bytes: "a@b.co"}        - значение типа bytes
+#   {special: object|list}   - object() или ['a@b.co']
+# Оракул класса: returns (ожидаемое значение) или raises (имя исключения).
+# Элемент inputs может быть словарём {value: ..., returns: ...} с собственным ожидаемым значением.
+
+methods:
+  - name: is_valid
+    req_functional: ["FR-1", "FR-2", "FR-3", "FR-4", "FR-5"]
+    req_non_functional: ["NFR-1", "NFR-2"]
+    signature: "is_valid(self, email: str | None) -> bool"
+    pre: "true (допустим любой вход)"
+    post: "True тогда и только тогда, когда email удовлетворяет FR-1..FR-5; иначе False; исключений нет"
+    equivalence_classes:
+      - id: EC-V01
+        case: "Типовые корректные адреса"
+        req: ["FR-1", "FR-2", "FR-3", "FR-4"]
+        inputs: ["user@example.com", "first.last@sub.example.co.uk", "a@b.co"]
+        returns: true
+        expected: "True"
+      - id: EC-V02
+        case: "Допустимые спецсимволы в локальной части"
+        req: ["FR-2"]
+        inputs: ["u_s%e+r-1@example.org", "a.b.c@example.com", "-user@example.com", "+user@example.com"]
+        returns: true
+        expected: "True"
+      - id: EC-V03
+        case: "Регистр букв не влияет на корректность"
+        req: ["FR-2", "FR-3", "FR-4"]
+        inputs: ["USER@EXAMPLE.COM", "User@Example.Com"]
+        returns: true
+        expected: "True"
+      - id: EC-V04
+        case: "Поддомены, цифры и дефис внутри меток"
+        req: ["FR-3"]
+        inputs: ["user@mail.server1.example.com", "a@1.2.co", "user@my-site.com"]
+        returns: true
+        expected: "True"
+      - id: EC-V05
+        case: "Нет символа @ или пустая строка (нарушение FR-1)"
+        req: ["FR-1"]
+        inputs: ["", "user.example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V06
+        case: "Несколько символов @ (нарушение FR-1)"
+        req: ["FR-1"]
+        inputs: ["a@b@c.com", "a@@b.com", "@@"]
+        returns: false
+        expected: "False"
+      - id: EC-V07
+        case: "Пустая локальная часть (нарушение FR-2)"
+        req: ["FR-2"]
+        inputs: ["@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V08
+        case: "Точка в начале или конце локальной части"
+        req: ["FR-2"]
+        inputs: [".user@example.com", "user.@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V09
+        case: "Две точки подряд в локальной части"
+        req: ["FR-2"]
+        inputs: ["us..er@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V10
+        case: "Недопустимые символы в локальной части"
+        req: ["FR-2"]
+        inputs: ["user!@example.com", "us#er@example.com", "us,er@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V11
+        case: "Граница: локальная часть 64 символа"
+        req: ["FR-2"]
+        inputs:
+          - concat: [{unit: "a", count: 64}, "@example.com"]
+        returns: true
+        expected: "True"
+      - id: EC-V12
+        case: "Граница: локальная часть 65 символов"
+        req: ["FR-2"]
+        inputs:
+          - concat: [{unit: "a", count: 65}, "@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V13
+        case: "Домен из одной метки (нарушение FR-3)"
+        req: ["FR-3"]
+        inputs: ["user@example", "user@localhost"]
+        returns: false
+        expected: "False"
+      - id: EC-V14
+        case: "Пустые метки домена"
+        req: ["FR-3"]
+        inputs: ["user@example..com", "user@.example.com", "user@example.com."]
+        returns: false
+        expected: "False"
+      - id: EC-V15
+        case: "Дефис в начале или конце метки"
+        req: ["FR-3"]
+        inputs: ["user@-example.com", "user@example-.com", "user@-.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V16
+        case: "Недопустимые символы в домене"
+        req: ["FR-3"]
+        inputs: ["user@exa_mple.com", "user@exam!ple.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V17
+        case: "Граница: метка домена 63 символа"
+        req: ["FR-3"]
+        inputs:
+          - concat: ["user@", {unit: "a", count: 63}, ".com"]
+        returns: true
+        expected: "True"
+      - id: EC-V18
+        case: "Граница: метка домена 64 символа"
+        req: ["FR-3"]
+        inputs:
+          - concat: ["user@", {unit: "a", count: 64}, ".com"]
+        returns: false
+        expected: "False"
+      - id: EC-V19
+        case: "Некорректная последняя метка (TLD)"
+        req: ["FR-4"]
+        inputs: ["user@example.c", "user@example.123", "user@example.c0m"]
+        returns: false
+        expected: "False"
+      - id: EC-V20
+        case: "Граница: общая длина 254 символа"
+        req: ["FR-1"]
+        inputs:
+          - concat: [{unit: "a", count: 64}, "@", {unit: "b", count: 63}, ".", {unit: "c", count: 63}, ".", {unit: "d", count: 61}]
+        returns: true
+        expected: "True"
+      - id: EC-V21
+        case: "Граница: общая длина 255 символов"
+        req: ["FR-1"]
+        inputs:
+          - concat: [{unit: "a", count: 64}, "@", {unit: "b", count: 63}, ".", {unit: "c", count: 63}, ".", {unit: "d", count: 62}]
+        returns: false
+        expected: "False"
+      - id: EC-V22
+        case: "Пробелы и управляющие символы"
+        req: ["FR-5"]
+        inputs: [" user@example.com", "user@example.com ", "us er@example.com", "user@example.com\n", "us\ter@example.com", "a\x00@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V23
+        case: "Кириллица и прочие не-ASCII символы"
+        req: ["FR-5"]
+        inputs: ["юзер@example.com", "user@пример.рф", "usér@example.com"]
+        returns: false
+        expected: "False"
+      - id: EC-V24
+        case: "Вход не является строкой (NFR-1: без исключений)"
+        req: ["FR-1", "NFR-1"]
+        inputs: [null, 123, 1.5, true, {bytes: "a@b.co"}, {special: object}, {special: list}]
+        returns: false
+        expected: "False, исключение не возникает"
+      - id: EC-V25
+        case: "Пустой домен после @ (нарушение FR-3)"
+        req: ["FR-3"]
+        inputs: ["user@", "a@"]
+        returns: false
+        expected: "False"
+
+  - name: extract_domain
+    req_functional: ["FR-6", "FR-7"]
+    req_non_functional: ["NFR-2"]
+    signature: "extract_domain(self, email: str | None) -> str"
+    pre: "true (допустим любой вход)"
+    post: "email корректен -> домен в нижнем регистре; иначе ValueError"
+    equivalence_classes:
+      - id: EC-D01
+        case: "Домен возвращается в нижнем регистре"
+        req: ["FR-6"]
+        inputs:
+          - {value: "user@Sub.Example.COM", returns: "sub.example.com"}
+          - {value: "USER+Tag@Example.com", returns: "example.com"}
+          - {value: "a@mail.Example.CO.UK", returns: "mail.example.co.uk"}
+        expected: "Домен в нижнем регистре, поддомены сохранены"
+      - id: EC-D02
+        case: "Некорректный адрес"
+        req: ["FR-7"]
+        inputs: ["not-an-email", "user@example", "", " user@example.com", "юзер@example.com"]
+        raises: ValueError
+        expected: "ValueError"
+      - id: EC-D03
+        case: "Вход не является строкой"
+        req: ["FR-7"]
+        inputs: [null, 123, {bytes: "a@b.co"}]
+        raises: ValueError
+        expected: "ValueError"
+
+# Инварианты и нефункциональные проверки (kind: проверка, которую умеет строить генератор)
+invariants:
+  - id: INV-1
+    kind: repeatable
+    req_non_functional: ["NFR-2"]
+    desc: "Повторные вызовы с теми же аргументами, в том числе на другом экземпляре, дают одинаковый результат"
+    method: is_valid
+    inputs: ["user@example.com", "bad", "a@b.c"]
+  - id: INV-2
+    kind: no_instance_state
+    req_non_functional: ["NFR-2"]
+    desc: "У экземпляра нет собственных атрибутов (состояния)"
+  - id: INV-3
+    kind: stdlib_only
+    req_non_functional: ["NFR-3"]
+    desc: "Модуль импортирует только стандартную библиотеку и пакет lab"
