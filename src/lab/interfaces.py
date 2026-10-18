@@ -1,0 +1,6 @@
+from abc import ABC, abstractmethod
+class IEmailValidator(ABC):
+    @abstractmethod
+    def is_valid(self, email: str | None) -> bool: ...
+    @abstractmethod
+    def extract_domain(self, email: str | None) -> str: ...
