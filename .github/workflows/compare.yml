@@ -1,0 +1,62 @@
+name: Comparative Test Report
+
+on:
+  workflow_dispatch:            # только ручной запуск
+
+jobs:
+  test:
+    name: Test ${{ matrix.branch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # упавшая версия не отменяет остальные
+      matrix:
+        branch: [ai-version-1, ai-version-2, ai-version-3]
+
+    steps:
+      - name: Checkout ${{ matrix.branch }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}   # принудительно берём нужную ветку
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Test
+        run: python -m pytest --verbose --junitxml=test-results.xml
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ matrix.branch }}
+          path: test-results.xml
+
+  report:
+    name: Unified report
+    needs: test
+    if: always()                # отчёт строится даже если часть задач упала
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main (scripts)
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download JUnit reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: artifacts
+
+      - name: Build unified report
+        run: python scripts/summarize_junit.py artifacts >> "$GITHUB_STEP_SUMMARY"
