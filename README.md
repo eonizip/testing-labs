@@ -20,3 +20,16 @@
 
 * `.github/workflows/ci.yml` — тесты при push, pull_request и вручную (workflow_dispatch).
 * `.github/workflows/compare.yml` — ручной запуск: тесты всех трёх веток и единый отчёт.
+
+## Автоматическая генерация тестов (лабораторная работа №5)
+
+* `spec/emailvalidator.yaml` — формальная спецификация с трассировкой требований (FR-n, NFR-n).
+* `generator/gen_tests.py` — генератор pytest-тестов из спецификации; `config.yaml` — его параметры.
+* Сгенерированные тесты не хранятся в репозитории: пайплайн создаёт их при каждом запуске.
+
+        python generator/gen_tests.py                       # сгенерировать тесты и матрицу трассировки
+        python generator/gen_tests.py --verify-determinism  # проверить детерминированность
+        python -m pytest -v
+
+Дополнительные скрипты: `scripts/local_compare.py` (локальный аналог compare.yml),
+`scripts/code_metrics.py` (метрики кода), `scripts/mutants_check.py` (мутационная проверка тестов).

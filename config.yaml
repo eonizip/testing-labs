@@ -1,0 +1,8 @@
+# config.yaml - конфигурация генератора тестов
+target_language: python
+test_framework: pytest
+spec_path: spec/emailvalidator.yaml
+module_import: lab.email_validator      # откуда импортируется тестируемый класс
+output_dir: tests/module_tests
+output_file: test_generated_email_validator.py
+traceability_report: reports/traceability.md

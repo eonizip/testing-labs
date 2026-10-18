@@ -7,3 +7,5 @@ artifacts/
 .coverage
 coverage.xml
 htmlcov/
+tests/module_tests/test_generated_*.py
+reports/
