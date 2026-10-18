@@ -1,4 +1,4 @@
-name: Python CI (pytest)
+name: CI - Generate & Run pytest Tests
 
 on:
   push:
@@ -8,13 +8,15 @@ on:
   workflow_dispatch:            # ручной запуск из вкладки Actions
 
 jobs:
-  build-and-test:
+  test-generation-and-execution:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Получение кода
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Среда Python (нужна и генератору, и тестам)
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -24,12 +26,34 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Test
-        run: python -m pytest --verbose --junitxml=test-results.xml
+      # 3. Генерация тестов из формальной спецификации (--strict: ошибка, если есть непокрытые требования)
+      - name: Generate pytest tests
+        run: python generator/gen_tests.py --config config.yaml --strict
 
-      - name: Publish test results
-        if: always()            # сохранять отчёт и при упавших тестах
+      # 4. Один и тот же вход должен давать один и тот же результат
+      - name: Verify generator determinism
+        run: python generator/gen_tests.py --verify-determinism
+
+      # 5. Запуск тестов (рукописных и сгенерированных) с измерением покрытия кода модуля
+      - name: Run tests with coverage
+        run: |
+          python -m coverage run --branch --include="src/lab/*" -m pytest --verbose --junitxml=test-results.xml
+          python -m coverage report --show-missing
+          python -m coverage xml
+
+      # 6. Матрица трассировки - на страницу запуска
+      - name: Publish traceability matrix
+        if: always()
+        run: cat reports/traceability.md >> "$GITHUB_STEP_SUMMARY"
+
+      # 7. Сохранение результатов в артефакты
+      - name: Upload results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-results-${{ github.ref_name }}
-          path: test-results.xml
+          path: |
+            test-results.xml
+            coverage.xml
+            reports/traceability.md
+            tests/module_tests/test_generated_email_validator.py

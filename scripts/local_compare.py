@@ -32,6 +32,8 @@ def main(branches):
             run([sys.executable, "-m", "venv", str(venv)], work)                       # чистое окружение
             py = str(venv / "bin" / "python")
             run([py, "-m", "pip", "install", "-q", "-r", "requirements.txt"], work)    # Install dependencies
+            if (work / "generator" / "gen_tests.py").exists():                          # Generate pytest tests
+                run([py, "generator/gen_tests.py", "--config", "config.yaml", "--strict"], work)
             t1 = time.perf_counter()
             art = out_dir / f"junit-{br}"
             art.mkdir(parents=True, exist_ok=True)
