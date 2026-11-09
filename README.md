@@ -33,3 +33,22 @@
 
 Дополнительные скрипты: `scripts/local_compare.py` (локальный аналог compare.yml),
 `scripts/code_metrics.py` (метрики кода), `scripts/mutants_check.py` (мутационная проверка тестов).
+
+## Интеграционное тестирование (лабораторная работа №6)
+
+* `src/lab/implementations/` - три ИИ-реализации IEmailValidator (ChatGPT, DeepSeek, Claude).
+* `src/lab/subscriber_service.py` - сервис-потребитель `SubscriberService`, зависящий от `IEmailValidator`.
+* `tests/integration/` - интеграционные тесты (параметризация по реализациям, свежие экземпляры в каждом тесте).
+* `scripts/compare_implementations.py` - дифференциальное сравнение реализаций.
+
+        python -m pytest tests/integration -v
+        LAB_INCLUDE_CONTROL=1 python -m pytest tests/integration    # + заведомо неверная реализация (контроль)
+
+## Приложение с GUI (лабораторные работы №7 и №8)
+
+Окно «Менеджер подписчиков» (PySide6) использует одну реализацию - Gen3 (Claude).
+
+        python -m pip install -r requirements-gui.txt
+        PYTHONPATH=src python -m lab.gui.app                                    # запуск (Windows: set PYTHONPATH=src)
+        QT_QPA_PLATFORM=offscreen PYTHONPATH=src python scripts/gui_checks.py system artifacts/gui   # сценарии ЛР №7
+        QT_QPA_PLATFORM=offscreen PYTHONPATH=src python scripts/gui_checks.py manual artifacts/gui   # чек-лист ЛР №8
