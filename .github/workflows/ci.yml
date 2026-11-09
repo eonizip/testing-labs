@@ -37,7 +37,7 @@ jobs:
       # 5. Запуск тестов (рукописных и сгенерированных) с измерением покрытия кода модуля
       - name: Run tests with coverage
         run: |
-          python -m coverage run --branch --include="src/lab/*" -m pytest --verbose --junitxml=test-results.xml
+          python -m coverage run --branch --include="src/lab/email_validator.py" -m pytest --verbose --junitxml=test-results.xml
           python -m coverage report --show-missing
           python -m coverage xml
 
